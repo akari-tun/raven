@@ -1,4 +1,8 @@
 #include <hal/gpio.h>
+
+#define LED_1_GPIO 16 // Only difference with TTGO is LED pin
+#define LED_1_USE_PWM
+
 // User button
 #define BUTTON_1_GPIO 0
 

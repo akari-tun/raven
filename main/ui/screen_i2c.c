@@ -18,8 +18,8 @@
 #include "screen_i2c.h"
 
 // this is the max frequency allowed by the OLED screen
-//#define SCREEN_I2C_MASTER_FREQ_HZ 1800000
-#define SCREEN_I2C_MASTER_FREQ_HZ 400000
+#define SCREEN_I2C_MASTER_FREQ_HZ 1800000
+//#define SCREEN_I2C_MASTER_FREQ_HZ 400000
 
 static const char *TAG = "screen.i2c";
 
