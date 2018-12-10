@@ -25,6 +25,8 @@
 
 static const char *TAG = "Settings";
 
+#define MAX_SETTING_KEY_LENGTH 15
+
 // clang-format off
 #define NO_VALUE {0}
 #define BOOL(v) {.u8 = (v ? 1 : 0)}
@@ -503,6 +505,12 @@ static const setting_t settings[] = {
     FOLDER(SETTING_KEY_DIAGNOSTICS, "Diagnostics", FOLDER_ID_DIAGNOSTICS, FOLDER_ID_ROOT, NULL),
     CMD_SETTING(SETTING_KEY_DIAGNOSTICS_FREQUENCIES, "Frequencies", FOLDER_ID_DIAGNOSTICS, 0, 0),
     CMD_SETTING(SETTING_KEY_DIAGNOSTICS_DEBUG_INFO, "Debug Info", FOLDER_ID_DIAGNOSTICS, 0, 0),
+
+#if defined(USE_DEVELOPER_MENU)
+    FOLDER(SETTING_KEY_DEVELOPER, "Developer Options", FOLDER_ID_DEVELOPER, FOLDER_ID_DIAGNOSTICS, NULL),
+    BOOL_SETTING(SETTING_KEY_DEVELOPER_REMOTE_DEBUGGING, "Remote Debugging", 0, FOLDER_ID_DEVELOPER, false),
+    CMD_SETTING(SETTING_KEY_DEVELOPER_REBOOT, "Reboot", FOLDER_ID_DEVELOPER, 0, 0),
+#endif
 };
 
 #if CONFIG_MAX_PAIRED_RX != 4 && CONFIG_MAX_PAIRED_RX != 16 && CONFIG_MAX_PAIRED_RX != 32
@@ -654,12 +662,21 @@ void settings_init(void)
 
     for (int ii = 0; ii < ARRAY_COUNT(settings); ii++)
     {
-        bool found = true;
         const setting_t *setting = &settings[ii];
+        // Checking this at compile time is tricky, since most strings are
+        // assembled via macros. Do it a runtime instead, impact should be
+        // pretty minimal.
+        if (strlen(setting->key) > MAX_SETTING_KEY_LENGTH)
+        {
+            LOG_E(TAG, "Setting key '%s' is too long (%d, max is %d)", setting->key,
+                  strlen(setting->key), MAX_SETTING_KEY_LENGTH);
+            abort();
+        }
         if (setting->flags & SETTING_FLAG_READONLY)
         {
             continue;
         }
+        bool found = true;
         size_t size;
         switch (setting->type)
         {
