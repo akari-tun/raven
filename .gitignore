@@ -1,6 +1,11 @@
 /build
 /build-*
 /tmp
+<<<<<<< HEAD
 
 # Visual Studio Code
 .vscode
+=======
+/releases
+/.vscode
+>>>>>>> raven/master

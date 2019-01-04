@@ -14,7 +14,7 @@
 #endif
 
 #include "air/air_radio.h"
-#include "air/air_radio_sx127x.h"
+#include "air/air_radio_driver.h"
 
 #if defined(USE_BLUETOOTH)
 #include "bluetooth/bluetooth.h"
@@ -48,6 +48,7 @@
 #include "util/time.h"
 
 static air_radio_t radio = {
+#if defined(USE_RADIO_SX127X)
     .sx127x.spi_bus = SX127X_SPI_BUS,
     .sx127x.mosi = SX127X_GPIO_MOSI,
     .sx127x.miso = SX127X_GPIO_MISO,
@@ -56,6 +57,7 @@ static air_radio_t radio = {
     .sx127x.rst = SX127X_GPIO_RST,
     .sx127x.dio0 = SX127X_GPIO_DIO0,
     .sx127x.output_type = SX127X_OUTPUT_TYPE,
+#endif
 };
 
 static rc_t rc;
@@ -117,14 +119,15 @@ static void setting_changed(const setting_t *setting, void *user_data)
 void raven_ui_init(void)
 {
     ui_config_t cfg = {
-        .button = BUTTON_1_GPIO,
-#if defined(USE_TOUCH_BUTTON)
-#if defined(BUTTON_1_GPIO_IS_TOUCH)
-        .button_is_touch = true,
-#else
-        .button_is_touch = false,
+        .buttons = {
+            [BUTTON_ID_ENTER] = BUTTON_CONFIG_FROM_GPIO(BUTTON_ENTER_GPIO),
+#if defined(USE_BUTTON_5WAY)
+            [BUTTON_ID_LEFT] = BUTTON_CONFIG_FROM_GPIO(BUTTON_LEFT_GPIO),
+            [BUTTON_ID_RIGHT] = BUTTON_CONFIG_FROM_GPIO(BUTTON_RIGHT_GPIO),
+            [BUTTON_ID_UP] = BUTTON_CONFIG_FROM_GPIO(BUTTON_UP_GPIO),
+            [BUTTON_ID_DOWN] = BUTTON_CONFIG_FROM_GPIO(BUTTON_DOWN_GPIO),
 #endif
-#endif
+        },
         .beeper = BEEPER_GPIO,
 #ifdef USE_SCREEN
         .screen.i2c_bus = SCREEN_I2C_BUS,
