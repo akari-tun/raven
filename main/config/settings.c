@@ -103,6 +103,17 @@ typedef enum
 typedef setting_visibility_e (*setting_visibility_f)(folder_id_e folder, settings_view_e view_id, const setting_t *setting);
 typedef int (*setting_dynamic_format_f)(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt);
 
+static int setting_format_own_addr(char *buf, size_t size, const setting_t *setting, setting_dynamic_format_e fmt)
+{
+    if (fmt == SETTING_DYNAMIC_FORMAT_VALUE)
+    {
+        air_addr_t addr = config_get_addr();
+        air_addr_format(&addr, buf, size);
+        return strlen(buf) + 1;
+    }
+    return 0;
+}
+
 static setting_visibility_e setting_visibility_root(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
     if (SETTING_IS(setting, SETTING_KEY_RC_MODE))
@@ -127,10 +138,12 @@ static setting_visibility_e setting_visibility_root(folder_id_e folder, settings
     {
         return SETTING_SHOW_IF(config_get_rc_mode() == RC_MODE_RX);
     }
+#if defined(USE_SCREEN)
     if (SETTING_IS(setting, SETTING_KEY_SCREEN))
     {
         return SETTING_SHOW_IF_SCREEN(view_id);
     }
+#endif
     if (SETTING_IS(setting, SETTING_KEY_RECEIVERS))
     {
         return SETTING_SHOW_IF(config_get_rc_mode() == RC_MODE_TX);
@@ -316,7 +329,7 @@ static const char *air_band_table[] = {
 };
 _Static_assert(ARRAY_COUNT(air_band_table) == CONFIG_AIR_BAND_COUNT, "Invalid air band names table");
 #if defined(USE_TX_SUPPORT)
-static const char *tx_input_table[] = {"CRSF", "IBUS", "Test"};
+static const char *tx_input_table[] = {"CRSF", "PPM", "IBUS", "Test"};
 #endif
 static const char *air_rf_power_table[] = {"Auto", "1mw", "10mw", "25mw", "50mw", "100mw"};
 _Static_assert(ARRAY_COUNT(air_rf_power_table) == AIR_RF_POWER_LAST - AIR_RF_POWER_FIRST + 1, "air_rf_power_table invalid");
@@ -366,7 +379,9 @@ static const char *rssi_channel_table[] = {
 };
 #endif
 #if defined(USE_SCREEN)
+#if !defined(SCREEN_FIXED_ORIENTATION)
 static const char *screen_orientation_table[] = {"Horizontal", "Horizontal (buttons at the right)", "Vertical", "Vertical (buttons on top)"};
+#endif
 static const char *screen_brightness_table[] = {"Low", "Medium", "High"};
 static const char *screen_autopoweroff_table[] = {"Disabled", "30 sec", "1 min", "5 min", "10 min"};
 #endif
@@ -380,6 +395,7 @@ static const char *view_crsf_input_tx_settings[] = {
     SETTING_KEY_ABOUT,
     SETTING_KEY_ABOUT_VERSION,
     SETTING_KEY_ABOUT_BUILD_DATE,
+    SETTING_KEY_ABOUT_ADDR,
 };
 
 static setting_value_t setting_values[SETTING_COUNT];
@@ -445,7 +461,9 @@ static const setting_t settings[] = {
 
 #if defined(USE_SCREEN)
     FOLDER(SETTING_KEY_SCREEN, "Screen", FOLDER_ID_SCREEN, FOLDER_ID_ROOT, NULL),
+#if !defined(SCREEN_FIXED_ORIENTATION)
     U8_MAP_SETTING(SETTING_KEY_SCREEN_ORIENTATION, "Orientation", 0, FOLDER_ID_SCREEN, screen_orientation_table, SCREEN_ORIENTATION_DEFAULT),
+#endif
     U8_MAP_SETTING(SETTING_KEY_SCREEN_BRIGHTNESS, "Brightness", 0, FOLDER_ID_SCREEN, screen_brightness_table, SCREEN_BRIGHTNESS_DEFAULT),
     U8_MAP_SETTING(SETTING_KEY_SCREEN_AUTO_OFF, "Auto Off", 0, FOLDER_ID_SCREEN, screen_autopoweroff_table, UI_SCREEN_AUTOOFF_DEFAULT),
 #endif
@@ -501,6 +519,7 @@ static const setting_t settings[] = {
     RO_STRING_SETTING(SETTING_KEY_ABOUT_VERSION, "Version", FOLDER_ID_ABOUT, SOFTWARE_VERSION),
     RO_STRING_SETTING(SETTING_KEY_ABOUT_BUILD_DATE, "Build Date", FOLDER_ID_ABOUT, __DATE__),
     RO_STRING_SETTING(SETTING_KEY_ABOUT_BUILD_DATE, "Board", FOLDER_ID_ABOUT, BOARD_NAME),
+    RX_STRING_SETTING(SETTING_KEY_ABOUT_ADDR, "Address", FOLDER_ID_ABOUT, setting_format_own_addr),
 
     FOLDER(SETTING_KEY_DIAGNOSTICS, "Diagnostics", FOLDER_ID_DIAGNOSTICS, FOLDER_ID_ROOT, NULL),
     CMD_SETTING(SETTING_KEY_DIAGNOSTICS_FREQUENCIES, "Frequencies", FOLDER_ID_DIAGNOSTICS, 0, 0),

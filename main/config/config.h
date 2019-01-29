@@ -24,6 +24,7 @@ typedef enum
 typedef enum
 {
     TX_INPUT_CRSF,
+    TX_INPUT_PPM,
     TX_INPUT_IBUS,
     TX_INPUT_FAKE,
     TX_INPUT_FIRST = TX_INPUT_CRSF,
@@ -163,6 +164,12 @@ tx_input_type_e config_get_input_type(void);
 rx_output_type_e config_get_output_type(void);
 
 air_addr_t config_get_addr(void);
+// Returns the configured name for the device
+// (pilot name in TX mode, craft name in RX mode)
+const char *config_get_name(void);
+// Returns the name of the current rc_mode_e
+// ("TX" or "RX")
+const char *config_get_mode_name(void);
 
 air_band_e config_get_air_band(config_air_band_e band);
 air_band_mask_t config_get_air_band_mask(void);
