@@ -1,0 +1,51 @@
+#include <hal/gpio.h>
+
+#include "target/bands/868_915.h"
+#include "target/platforms/esp32/single_button.h"
+
+// Buzzer
+#define BEEPER_GPIO 13
+
+//SCREEN
+#define USE_SCREEN
+#define SCREEN_I2C_BUS I2C_NUM_1
+#define SCREEN_I2C_ADDR 0x3c
+
+#define SCREEN_GPIO_SDA 32
+#define SCREEN_GPIO_SCL 33
+#define SCREEN_GPIO_RST 0
+
+// SX127X
+#define USE_RADIO_SX127X
+#define SX127X_SPI_BUS VSPI_HOST
+#define SX127X_GPIO_SCK 17
+#define SX127X_GPIO_MISO 4
+#define SX127X_GPIO_MOSI 16
+#define SX127X_GPIO_CS 5
+#define SX127X_GPIO_RST 18
+#define SX127X_GPIO_DIO0 19
+
+#define SX127X_OUTPUT_TYPE SX127X_OUTPUT_PA_BOOST
+
+#define USE_BUTTON_5WAY
+#define BUTTON_ENTER_GPIO 0
+#define BUTTON_RIGHT_GPIO 34
+#define BUTTON_LEFT_GPIO 12
+#define BUTTON_UP_GPIO 14
+#define BUTTON_DOWN_GPIO 35
+
+#define USE_LED
+#define LED_USE_WS2812
+#define LED_USE_FADING
+#define LED_1_GPIO 21
+#define LED_1_USE_WS2812
+
+#define TX_DEFAULT_GPIO 27
+#define RX_DEFAULT_GPIO 26
+
+#define TX_UNUSED_GPIO 26
+#define RX_UNUSED_GPIO 27
+
+#define HAL_GPIO_USER_MASK (HAL_GPIO_M(TX_DEFAULT_GPIO) | HAL_GPIO_M(RX_DEFAULT_GPIO) | HAL_GPIO_M(TX_UNUSED_GPIO) | HAL_GPIO_M(RX_UNUSED_GPIO))
+
+#define BOARD_NAME "AF_Tx Lite_915"
