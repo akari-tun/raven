@@ -160,6 +160,16 @@ static void sx127x_set_fsk_parameters(sx127x_t *sx127x);
 static void sx127x_fsk_wait_for_mode_ready(sx127x_t *sx127x);
 static void sx127x_set_fsk_sync_word(sx127x_t *sx127x);
 
+static bool sx127x_mode_is_tx(uint8_t mode)
+{
+    return (mode | MODE_LORA) == (MODE_LORA | MODE_TX);
+}
+
+static bool sx127x_mode_is_rx(uint8_t mode)
+{
+    return (mode | MODE_LORA) == (MODE_LORA | MODE_RX_CONTINUOUS);
+}
+
 static uint8_t sx127x_read_reg(sx127x_t *sx127x, uint8_t addr)
 {
     // Send 8 arbitrary bits to get one byte back in full duplex
@@ -179,6 +189,16 @@ static void sx127x_set_mode(sx127x_t *sx127x, uint8_t mode)
     {
         sx127x_write_reg(sx127x, REG_OP_MODE, mode);
         sx127x->state.mode = mode;
+
+        if (sx127x->txen != HAL_GPIO_NONE)
+        {
+            HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->txen, sx127x_mode_is_tx(mode) ? HAL_GPIO_HIGH : HAL_GPIO_LOW));
+        }
+
+        if (sx127x->rxen != HAL_GPIO_NONE)
+        {
+            HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->rxen, sx127x_mode_is_rx(mode) ? HAL_GPIO_HIGH : HAL_GPIO_LOW));
+        }
     }
 }
 
@@ -289,6 +309,18 @@ void sx127x_init(sx127x_t *sx127x)
 {
     HAL_ERR_ASSERT_OK(hal_gpio_setup(sx127x->rst, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_NONE));
     sx127x_reset(sx127x);
+
+    if (sx127x->txen != HAL_GPIO_NONE)
+    {
+        HAL_ERR_ASSERT_OK(hal_gpio_setup(sx127x->txen, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_NONE));
+        HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->txen, HAL_GPIO_LOW));
+    }
+
+    if (sx127x->rxen != HAL_GPIO_NONE)
+    {
+        HAL_ERR_ASSERT_OK(hal_gpio_setup(sx127x->rxen, HAL_GPIO_DIR_OUTPUT, HAL_GPIO_PULL_NONE));
+        HAL_ERR_ASSERT_OK(hal_gpio_set_level(sx127x->rxen, HAL_GPIO_LOW));
+    }
 
     // Initialize the SPI bus
     HAL_ERR_ASSERT_OK(hal_spi_bus_init(sx127x->spi_bus, sx127x->miso, sx127x->mosi, sx127x->sck));

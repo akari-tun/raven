@@ -16,6 +16,8 @@ GIT_REVISION := $(shell git rev-parse --short HEAD)
 
 CPPFLAGS += -DGIT_REVISION=\"$(GIT_REVISION)\" -DVERSION=\"$(VERSION)\"
 
+RELEASE ?=
+
 ifeq ($(RELEASE),1)
 CPPFLAGS += -DRAVEN_RELEASE
 endif
@@ -24,6 +26,8 @@ WERROR ?=
 ifeq ($(WERROR),1)
 CPPFLAGS += -Werror
 endif
+
+V ?=
 
 ifeq ($(V),1)
 STDOUT_REDIR :=
@@ -181,3 +185,6 @@ show-platforms:
 
 format:
 	./format.sh format
+
+format-check:
+	./format.sh check

@@ -170,16 +170,18 @@ static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_v
     {
         return SETTING_SHOW_IF(view_id != SETTINGS_VIEW_CRSF_INPUT);
     }
+#if defined(USE_GPIO_REMAP)
     if (SETTING_IS(setting, SETTING_KEY_TX_TX_GPIO))
     {
         // Don't allow changing the TX pin from the CRSF/IBUS configuration scripts
         // since it will break communication.
-        return SETTING_SHOW_IF(config_get_input_type() != TX_INPUT_FAKE && view_id != SETTINGS_VIEW_CRSF_INPUT);
+        return SETTING_SHOW_IF(config_get_input_type() == TX_INPUT_CRSF && view_id != SETTINGS_VIEW_CRSF_INPUT);
     }
     if (SETTING_IS(setting, SETTING_KEY_TX_RX_GPIO))
     {
-        return SETTING_VISIBILITY_HIDE;
+        return SETTING_SHOW_IF(config_get_input_type() == TX_INPUT_IBUS || config_get_input_type() == TX_INPUT_PPM);
     }
+#endif
     return SETTING_VISIBILITY_SHOW;
 }
 #endif
@@ -187,6 +189,7 @@ static setting_visibility_e setting_visibility_tx(folder_id_e folder, settings_v
 #if defined(USE_RX_SUPPORT)
 static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_view_e view_id, const setting_t *setting)
 {
+#if defined(USE_GPIO_REMAP)
     if (SETTING_IS(setting, SETTING_KEY_RX_TX_GPIO))
     {
         return SETTING_SHOW_IF(config_get_output_type() != RX_OUTPUT_NONE);
@@ -196,6 +199,7 @@ static setting_visibility_e setting_visibility_rx(folder_id_e folder, settings_v
     {
         return SETTING_SHOW_IF(config_get_output_type() != RX_OUTPUT_NONE);
     }
+#endif
 
     if (SETTING_IS(setting, SETTING_KEY_RX_RSSI_CHANNEL))
     {
@@ -227,7 +231,7 @@ static setting_visibility_e setting_visibility_rx_channel_outputs(folder_id_e fo
     int index = setting_rx_channel_output_get_pos(setting);
     if (index >= 0)
     {
-        int gpio = hal_gpio_user_at(index);
+        int gpio = gpio_get_configurable_at(index);
         if (gpio != HAL_GPIO_NONE && pwm_output_can_use_gpio(gpio))
         {
             return SETTING_VISIBILITY_SHOW;
@@ -242,7 +246,7 @@ static int setting_format_rx_channel_output(char *buf, size_t size, const settin
     char gpio_name[HAL_GPIO_NAME_LENGTH];
     if (index >= 0)
     {
-        int gpio = hal_gpio_user_at(index);
+        int gpio = gpio_get_configurable_at(index);
         switch (fmt)
         {
         case SETTING_DYNAMIC_FORMAT_NAME:
@@ -329,7 +333,15 @@ static const char *air_band_table[] = {
 };
 _Static_assert(ARRAY_COUNT(air_band_table) == CONFIG_AIR_BAND_COUNT, "Invalid air band names table");
 #if defined(USE_TX_SUPPORT)
-static const char *tx_input_table[] = {"CRSF", "PPM", "IBUS", "Test"};
+static const char *tx_input_table[] = {
+    "CRSF",
+    "PPM",
+    "IBUS",
+    "SBUS",
+#if defined(CONFIG_RAVEN_FAKE_INPUT)
+    "Test",
+#endif
+};
 #endif
 static const char *air_rf_power_table[] = {"Auto", "1mw", "10mw", "25mw", "50mw", "100mw"};
 _Static_assert(ARRAY_COUNT(air_rf_power_table) == AIR_RF_POWER_LAST - AIR_RF_POWER_FIRST + 1, "air_rf_power_table invalid");
@@ -420,8 +432,10 @@ static const setting_t settings[] = {
     U8_MAP_SETTING(SETTING_KEY_TX_RF_POWER, "Power", 0, FOLDER_ID_TX, air_rf_power_table, AIR_RF_POWER_DEFAULT),
     STRING_SETTING(SETTING_KEY_TX_PILOT_NAME, "Pilot Name", FOLDER_ID_TX),
     U8_MAP_SETTING(SETTING_KEY_TX_INPUT, "Input", 0, FOLDER_ID_TX, tx_input_table, TX_INPUT_FIRST),
+#if defined(USE_GPIO_REMAP)
     GPIO_USER_SETTING(SETTING_KEY_TX_TX_GPIO, "TX Pin", FOLDER_ID_TX, TX_DEFAULT_GPIO_IDX),
     GPIO_USER_SETTING(SETTING_KEY_TX_RX_GPIO, "RX Pin", FOLDER_ID_TX, RX_DEFAULT_GPIO_IDX),
+#endif
 #endif
 
 #if defined(USE_RX_SUPPORT)
@@ -430,8 +444,10 @@ static const setting_t settings[] = {
     BOOL_YN_SETTING(SETTING_KEY_RX_AUTO_CRAFT_NAME, "Auto Craft Name", 0, FOLDER_ID_RX, true),
     STRING_SETTING(SETTING_KEY_RX_CRAFT_NAME, "Craft Name", FOLDER_ID_RX),
     U8_MAP_SETTING(SETTING_KEY_RX_OUTPUT, "Output", 0, FOLDER_ID_RX, rx_output_table, RX_OUTPUT_MSP),
+#if defined(USE_GPIO_REMAP)
     GPIO_USER_SETTING(SETTING_KEY_RX_TX_GPIO, "TX Pin", FOLDER_ID_RX, TX_DEFAULT_GPIO_IDX),
     GPIO_USER_SETTING(SETTING_KEY_RX_RX_GPIO, "RX Pin", FOLDER_ID_RX, RX_DEFAULT_GPIO_IDX),
+#endif
     U8_MAP_SETTING(SETTING_KEY_RX_RSSI_CHANNEL, "RSSI Channel", 0, FOLDER_ID_RX, rssi_channel_table, RX_RSSI_CHANNEL_AUTO),
     BOOL_YN_SETTING(SETTING_KEY_RX_SBUS_INVERTED, "SBUS Inverted", 0, FOLDER_ID_RX, true),
     BOOL_YN_SETTING(SETTING_KEY_RX_SPORT_INVERTED, "S.Port Inverted", 0, FOLDER_ID_RX, true),
@@ -672,7 +688,7 @@ void settings_init(void)
     // Initialize GPIO names
     for (int ii = 0; ii < HAL_GPIO_USER_COUNT; ii++)
     {
-        hal_gpio_t x = hal_gpio_user_at(ii);
+        hal_gpio_t x = gpio_get_configurable_at(ii);
         hal_gpio_toa(x, gpio_name_storage[ii], sizeof(gpio_name_storage[ii]));
         gpio_names[ii] = gpio_name_storage[ii];
     }
@@ -990,7 +1006,7 @@ void setting_set_u8(const setting_t *setting, uint8_t v)
 hal_gpio_t setting_get_gpio(const setting_t *setting)
 {
     assert(setting->val_names == gpio_names);
-    return hal_gpio_user_at(setting_get_val_ptr(setting)->u8);
+    return gpio_get_configurable_at(setting_get_val_ptr(setting)->u8);
 }
 
 bool setting_get_bool(const setting_t *setting)
