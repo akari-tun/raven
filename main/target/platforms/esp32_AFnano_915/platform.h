@@ -4,7 +4,7 @@
 #include "target/platforms/esp32/single_button.h"
 
 // Buzzer
-#define USE_BEEPER
+//#define USE_BEEPER
 #define BEEPER_GPIO 12
 
 //BUTTON
